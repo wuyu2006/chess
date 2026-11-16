@@ -1,0 +1,13 @@
+Chess Set
+=========
+
+Source: Poly Haven
+Asset:  https://polyhaven.com/a/chess_set
+Author: Riley Queen
+License: CC0 (public domain dedication)
+https://polyhaven.com/license
+
+Included here: glTF model, binary buffer, and 2K JPG textures
+(board and both piece colours).
+
+The model has been used as-is for local, offline rendering in GAMBIT.

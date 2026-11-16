@@ -1,0 +1,13 @@
+{
+  "name": "gambit-neural-chess",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GAMBIT — offline 3D chess with LLM opponents",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "engines": {
+    "node": ">=18.17"
+  }
+}

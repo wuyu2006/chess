@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#08090d">
+  <meta name="description" content="GAMBIT — 一座可以与大语言模型对弈的 3D 国际象棋棋盘。">
+  <title>GAMBIT · Neural Chess</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css?v=10">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three/three.module.js",
+        "three/addons/": "./vendor/three/addons/",
+        "chess.js": "./vendor/chess.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div class="app" id="app">
+    <canvas id="scene" aria-label="3D 国际象棋棋盘"></canvas>
+    <div class="ambient-grain" aria-hidden="true"></div>
+    <div class="vignette" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark"><span>♞</span></div>
+        <div class="brand-copy">
+          <div class="brand-name">GAMBIT</div>
+          <div class="brand-sub">NEURAL CHESS</div>
+        </div>
+      </div>
+      <div class="top-center">
+        <div class="live-pill" id="livePill">
+          <span class="live-dot"></span>
+          <span id="liveText">正在装载棋盘</span>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" id="soundBtn" title="开启 / 关闭音效" aria-label="音效">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <path d="M4 9.5v5h3.2l4.3 3.4V6.1L7.2 9.5H4Z" stroke-linejoin="round"/>
+            <path class="sound-wave" d="M15 9a4.2 4.2 0 0 1 0 6M17.8 6.6a8 8 0 0 1 0 10.8" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <button class="icon-btn" id="settingsBtn" title="API 与模型设置" aria-label="设置">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.55V21h-4v-.08A1.7 1.7 0 0 0 8.97 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1.03H3v-4h.08A1.7 1.7 0 0 0 4.6 8.94a1.7 1.7 0 0 0-.34-1.88L4.2 7l2.83-2.83.06.06A1.7 1.7 0 0 0 8.97 4.6 1.7 1.7 0 0 0 10 3.05V3h4v.08a1.7 1.7 0 0 0 1.03 1.55 1.7 1.7 0 0 0 1.88-.34l.06-.06L19.8 7l-.06.06a1.7 1.7 0 0 0-.34 1.88A1.7 1.7 0 0 0 20.95 10H21v4h-.08A1.7 1.7 0 0 0 19.4 15Z" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="game-layout" id="gameLayout">
+      <aside class="panel left-panel" id="leftPanel">
+        <div class="panel-head">
+          <span class="eyebrow">MATCH ROOM</span>
+          <span class="panel-index">01</span>
+        </div>
+
+        <div class="match-card">
+          <div class="player-row" id="humanRow">
+            <div class="player-avatar human-avatar" id="humanAvatar">♔</div>
+            <div class="player-copy">
+              <div class="player-name">你</div>
+              <div class="player-meta"><span id="humanColorLabel">白方</span><span class="dot-sep">·</span>玩家</div>
+            </div>
+            <span class="turn-led" id="humanTurnLed"></span>
+          </div>
+          <div class="match-divider"><span></span><b>VS</b><span></span></div>
+          <div class="player-row ai-player" id="aiRow">
+            <div class="player-avatar ai-avatar" id="aiAvatar"><span>AI</span></div>
+            <div class="player-copy">
+              <div class="player-name" id="aiName">DeepSeek V4.1 Flash</div>
+              <div class="player-meta"><span id="aiProviderLabel">DeepSeek</span><span class="dot-sep">·</span><span id="aiColorLabel">黑方</span></div>
+            </div>
+            <span class="turn-led" id="aiTurnLed"></span>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-label"><span>对局控制</span><i></i></div>
+          <div class="control-grid">
+            <button class="control-btn" id="newGameBtn"><span class="control-icon">↺</span>新对局</button>
+            <button class="control-btn" id="undoBtn"><span class="control-icon">↶</span>悔棋</button>
+            <button class="control-btn" id="flipBtn"><span class="control-icon">⇅</span>翻转视角</button>
+            <button class="control-btn mobile-only" id="feedBtn" aria-controls="rightPanel" aria-expanded="false" aria-label="棋谱与 AI 评论" title="棋谱与 AI 评论"><span class="control-icon">▤</span>棋谱</button>
+            <button class="control-btn danger" id="resignBtn"><span class="control-icon">⚑</span>认输</button>
+          </div>
+        </div>
+
+        <div class="panel-section material-section">
+          <div class="section-label"><span>子力</span><b id="materialAdvantage">均势</b></div>
+          <div class="material-bar"><div class="material-fill" id="materialFill"></div><span class="material-center"></span></div>
+          <div class="captured">
+            <div class="captured-row"><span class="captured-label">你吃</span><div class="captured-list" id="humanCaptures">—</div></div>
+            <div class="captured-row"><span class="captured-label">AI 吃</span><div class="captured-list" id="aiCaptures">—</div></div>
+          </div>
+        </div>
+
+        <div class="panel-foot"><span class="mini-dot"></span> 本地 3D 模型 · 离线可运行</div>
+      </aside>
+
+      <main class="center-stage" id="centerStage">
+        <div class="turn-pill" id="turnPill"><span class="turn-dot"></span><span id="turnText">准备开始</span></div>
+
+        <div class="thinking-card" id="thinkingCard">
+          <div class="thinking-spinner"><span></span><span></span><span></span></div>
+          <div>
+            <div class="thinking-title" id="thinkingTitle">AI 正在思考</div>
+            <div class="thinking-sub" id="thinkingSub">正在分析局面</div>
+          </div>
+        </div>
+
+        <div class="board-hint" id="boardHint">拖拽旋转 · 滚轮缩放 · 点击棋子</div>
+      </main>
+
+      <aside class="panel right-panel" id="rightPanel">
+        <div class="panel-head">
+          <span class="eyebrow">GAME FEED</span>
+          <span class="panel-index" id="moveCount">0 手</span>
+        </div>
+
+        <div class="eval-card">
+          <div class="eval-head"><span>局面</span><b id="positionLabel">开局</b></div>
+          <div class="eval-track"><div class="eval-fill" id="evalFill"></div></div>
+        </div>
+
+        <div class="move-scroll" id="moveScroll">
+          <div class="move-list" id="moveList">
+            <div class="empty-state"><span>♙</span><p>棋谱将在这里展开</p></div>
+          </div>
+        </div>
+
+        <div class="comment-card" id="commentCard">
+          <div class="comment-head">
+            <div class="ai-badge"><span class="ai-orb"></span><span id="commentProvider">DEEPSEEK</span></div>
+            <span class="comment-status" id="commentStatus">待命</span>
+          </div>
+          <p id="aiComment">选择阵营，开始与 AI 对弈。</p>
+          <div class="comment-usage" id="usageLabel"></div>
+        </div>
+
+        <div class="panel-foot"><span class="mini-dot"></span> FEN 提示词 · 每步一次请求</div>
+      </aside>
+    </div>
+
+    <div class="setup-overlay" id="setupOverlay">
+      <div class="setup-backdrop"></div>
+      <div class="setup-shell">
+        <section class="setup-intro">
+          <div class="eyebrow gold">GAMBIT / NEW MATCH</div>
+          <h1>与最强 AI<br><em>下一盘棋。</em></h1>
+          <p>一座可旋转的 3D 大理石棋盘，实时接入 DeepSeek、OpenAI、Claude、Gemini 等模型。所有模型、贴图与引擎均保存在本地。</p>
+          <div class="setup-badges">
+            <span><b>32</b> 独立棋子</span>
+            <span><b>9</b> 模型厂商</span>
+            <span><b>0</b> 云端素材</span>
+          </div>
+          <div class="setup-credit">3D set · Poly Haven “Chess Set” · CC0</div>
+        </section>
+
+        <section class="setup-card">
+          <div class="setup-step"><span class="step-num">01</span><span>选择阵营</span></div>
+          <div class="side-picker">
+            <button class="side-option selected" data-side="w" type="button">
+              <span class="side-glyph">♔</span>
+              <span class="side-copy"><b>白方</b><small>先手 · 掌控节奏</small></span>
+              <span class="side-check">✓</span>
+            </button>
+            <button class="side-option" data-side="b" type="button">
+              <span class="side-glyph">♚</span>
+              <span class="side-copy"><b>黑方</b><small>后手 · 后发制人</small></span>
+              <span class="side-check">✓</span>
+            </button>
+          </div>
+
+          <div class="setup-step"><span class="step-num">02</span><span>选择对手</span><span class="recommend-pill">推荐 DeepSeek</span></div>
+          <div class="select-row">
+            <label class="field"><span>厂商</span><select id="setupProvider"></select></label>
+            <label class="field"><span>模型</span><select id="setupModel"></select></label>
+          </div>
+
+          <div class="model-info" id="modelInfo">
+            <span class="model-orb"></span>
+            <div><b id="modelInfoName">DeepSeek V4.1 Flash</b><small id="modelInfoSub">每步一次请求 · 轻量 FEN 提示词</small></div>
+            <span class="model-status" id="modelStatus">已就绪</span>
+          </div>
+
+          <label class="switch-row" id="thinkingRow">
+            <span><b>深度思考</b><small>更强棋力，消耗更多 token</small></span>
+            <input type="checkbox" id="setupThinking">
+            <i class="switch"></i>
+          </label>
+
+          <button class="primary-btn" id="startBtn" type="button"><span>开始对局</span><span class="btn-arrow">→</span></button>
+
+          <div class="setup-links">
+            <button class="text-btn" id="openSettingsFromSetup" type="button">API 与模型设置</button>
+            <span>·</span>
+            <button class="text-btn" id="offlineBtn" type="button">使用离线引擎</button>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div class="loading-screen" id="loadingScreen">
+      <div class="loader-mark">♞</div>
+      <div class="loader-title">GAMBIT</div>
+      <div class="loader-bar"><i id="loaderFill"></i></div>
+      <div class="loader-text" id="loaderText">正在装载大理石棋盘…</div>
+    </div>
+
+    <div class="modal" id="settingsModal" aria-hidden="true">
+      <div class="modal-backdrop" data-close="settingsModal"></div>
+      <div class="modal-card settings-card" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <div class="modal-head">
+          <div><div class="eyebrow">CONFIGURATION</div><h2 id="settingsTitle">API 与模型</h2></div>
+          <button class="icon-btn" data-close="settingsModal" aria-label="关闭">✕</button>
+        </div>
+        <p class="modal-lead">API Key 只保存在本机浏览器。DeepSeek 若已在服务端 <code>.env</code> 配置，可留空直接使用。请求由本地 Node 服务转发。</p>
+        <div class="settings-grid">
+          <label class="field"><span>厂商</span><select id="settingsProvider"></select></label>
+          <label class="field"><span>模型 ID</span><input id="settingsModel" list="modelDatalist" autocomplete="off"><datalist id="modelDatalist"></datalist></label>
+          <label class="field full"><span>API Key <em id="keyStatus"></em></span><input id="settingsApiKey" type="password" placeholder="sk-..." autocomplete="off"><small id="keyHint"></small></label>
+          <label class="field full"><span>自定义 Base URL（可选）</span><input id="settingsBaseUrl" placeholder="https://..." autocomplete="off"></label>
+          <label class="switch-row full" id="settingsThinkingRow"><span><b>DeepSeek 深度思考</b><small>开启推理模式，更准但消耗更多 token</small></span><input type="checkbox" id="settingsThinking"><i class="switch"></i></label>
+        </div>
+        <div class="settings-actions">
+          <button class="ghost-btn" id="clearKeyBtn" type="button">清除当前厂商 Key</button>
+          <button class="primary-btn small" id="saveSettingsBtn" type="button">保存设置</button>
+        </div>
+        <div class="settings-note">除所选厂商外，不会把 Key 或棋局发送到任何其他服务。离线时可直接使用内置引擎。</div>
+      </div>
+    </div>
+
+    <div class="modal" id="promotionModal" aria-hidden="true">
+      <div class="modal-backdrop" data-close="promotionModal"></div>
+      <div class="modal-card promotion-card" role="dialog" aria-modal="true" aria-labelledby="promotionTitle">
+        <div class="eyebrow">PROMOTION</div>
+        <h2 id="promotionTitle">选择升变棋子</h2>
+        <p>兵已抵达底线。选择它的新形态。</p>
+        <div class="promotion-options">
+          <button data-promotion="q" type="button"><span>♕</span><b>后</b><small>Queen</small></button>
+          <button data-promotion="r" type="button"><span>♖</span><b>车</b><small>Rook</small></button>
+          <button data-promotion="b" type="button"><span>♗</span><b>象</b><small>Bishop</small></button>
+          <button data-promotion="n" type="button"><span>♘</span><b>马</b><small>Knight</small></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="gameOverModal" aria-hidden="true">
+      <div class="modal-backdrop"></div>
+      <div class="modal-card gameover-card" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
+        <div class="gameover-glow"></div>
+        <div class="gameover-crown" id="gameOverCrown">♔</div>
+        <div class="eyebrow">MATCH COMPLETE</div>
+        <h2 id="gameOverTitle">对局结束</h2>
+        <p id="gameOverSubtitle"></p>
+        <div class="gameover-stats">
+          <div><span>手数</span><b id="gameOverMoves">0</b></div>
+          <div><span>对手</span><b id="gameOverOpponent">DeepSeek</b></div>
+          <div><span>结果</span><b id="gameOverResult">—</b></div>
+        </div>
+        <div class="gameover-actions">
+          <button class="ghost-btn" id="backToSetupBtn" type="button">返回设置</button>
+          <button class="primary-btn small" id="rematchBtn" type="button">再来一局</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+  </div>
+
+  <script type="module" src="js/main.js?v=9"></script>
+</body>
+</html>
